@@ -22,6 +22,8 @@ import path from 'path';
 
 dotenv.config();
 
+console.log("🚀 ISLAND INVEST BACKEND STARTING - VERSION 2.0 (RESILIENT) 🚀");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
