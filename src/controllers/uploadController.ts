@@ -5,15 +5,16 @@ import fs from 'fs';
 import prisma from '../config/database';
 
 // Ensure uploads directory exists
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
 const uploadDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
 
-if (!fs.existsSync(uploadDir)) {
-  try {
+try {
+  if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-  } catch (err) {
-    console.warn('Could not create upload directory, likely in read-only environment:', err);
+    console.log('Upload directory created at:', uploadDir);
   }
+} catch (err) {
+  console.error('Non-critical: Could not create upload directory:', err);
 }
 
 const storage = multer.diskStorage({
