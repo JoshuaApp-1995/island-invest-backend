@@ -4,22 +4,24 @@ import path from 'path';
 import fs from 'fs';
 import prisma from '../config/database';
 
-// Ensure uploads directory exists
-const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
-const uploadDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
-
-try {
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('Upload directory created at:', uploadDir);
+// Helper to get upload directory safely
+const getUploadDir = () => {
+  const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
+  const dir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
+  
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    // Ignore errors in serverless environment
   }
-} catch (err) {
-  console.error('Non-critical: Could not create upload directory:', err);
-}
+  return dir;
+};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, getUploadDir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -75,6 +77,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
     }
 
     // Delete from disk
+    const uploadDir = getUploadDir();
     const filePath = path.join(uploadDir, media.pathname);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -91,4 +94,3 @@ export const deleteMedia = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete media' });
   }
 };
-
