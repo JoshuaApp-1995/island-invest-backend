@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  USER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String?
+  email        String   @unique
+  password     String?
+  role         Role     @default(USER)
+  avatarUrl    String?  @map("avatar_url")
+  authProvider String   @default("local") @map("auth_provider")
+  providerId   String?  @map("provider_id")
+  sessions     Session[]
+  properties   Property[]
+  bookings       Booking[]
+  reviews        Review[]
+  sentMessages   Message[]      @relation("SentMessages")
+  receivedMessages Message[]    @relation("ReceivedMessages")
+  conversations1 Conversation[] @relation("User1Conversations")
+  conversations2 Conversation[] @relation("User2Conversations")
+  createdAt      DateTime @default(now())
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+}
+
+model Page {
+  id        String    @id @default(uuid())
+  title     String
+  slug      String    @unique
+  content   Json?     // JSON structure for the page builder
+  published Boolean   @default(true)
+  sections  Section[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Property {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  category        String
+  price           Float
+  currency        String   @default("USD")
+  location        String
+  latitude        Float?
+  longitude       Float?
+  status          String   @default("published")
+  ownerId         String   @map("user_id")
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  isPremium       Boolean  @default(false) @map("is_premium")
+  paymentStatus   String  @default("none") @map("payment_status")
+  paymentReceipt  String? @map("payment_receipt")
+  phone           String?
+  whatsapp        String?
+  slug            String?  @unique
+  metaTitle       String?  @map("meta_title")
+  metaDescription String? @map("meta_description")
+  keywords        String?
+  media           Media[]
+  bookings        Booking[]
+  reviews         Review[]
+  conversations   Conversation[]
+  createdAt       DateTime @default(now()) @map("created_at")
+  @@map("listings")
+}
+model Section {
+  id      String @id @default(uuid())
+  type    String // e.g., 'hero', 'features', 'footer'
+  content Json   // Flexible field for text, images, etc.
+  order   Int    @default(0)
+  pageId  String
+  page    Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id         String    @id @default(uuid())
+  url        String
+  pathname   String
+  type       String    // image, video
+  position   Int       @default(0)
+  propertyId String?   @map("listing_id")
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  @@map("listing_images")
+}
+
+model Plugin {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  enabled   Boolean  @default(false)
+  config    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id              String   @id @default(uuid())
+  title           String
+  slug            String   @unique
+  content         String   @db.Text
+  category        String
+  tags            String[]
+  image           String?  // Main feature image
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  propertyId      String   @map("property_id")
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIn         DateTime @map("check_in")
+  checkOut        DateTime @map("check_out")
+  status          String   @default("pending") // pending, accepted, rejected, cancelled
+  totalPrice      Float    @map("total_price")
+  paymentStatus   String   @default("unpaid") @map("payment_status")
+  stripeSessionId String?  @map("stripe_session_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+}
+
+model Settings {
+  id           String   @id @default("site-settings")
+  siteName     String   @default("IslandInvest")
+  logo         String?
+  contactEmail String?
+  updatedAt    DateTime @updatedAt
+}
+
+model Inquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  status    String   @default("new") // new, read, replied
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int      // 1 to 5
+  comment    String   @db.Text
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String   @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  // A user can only review a property once
+  @@unique([userId, propertyId])
+}
+
+model Conversation {
+  id          String    @id @default(uuid())
+  user1Id     String    @map("user1_id")
+  user2Id     String    @map("user2_id")
+  user1       User      @relation("User1Conversations", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2       User      @relation("User2Conversations", fields: [user2Id], references: [id], onDelete: Cascade)
+  propertyId  String?   @map("property_id")
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  messages    Message[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([user1Id, user2Id, propertyId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  content        String       @db.Text
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id")
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId     String       @map("receiver_id")
+  receiver       User         @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  isRead         Boolean      @default(false) @map("is_read")
+  createdAt      DateTime     @default(now()) @map("created_at")
+}
