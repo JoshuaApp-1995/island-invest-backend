@@ -66,9 +66,14 @@ app.delete('/api/media/:id', deleteMedia);
 // Load dynamic plugins
 loadPlugins(app);
 
-// Global Error Handler (Must be after all routes)
+// Global Error Handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Only listen if not on Vercel
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+export default app;
