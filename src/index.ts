@@ -39,7 +39,9 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), str
 app.use(express.json());
 
 // Serve static files from uploads folder
-app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const isVercel = process.env.VERCEL === '1';
+const uploadDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
+app.use('/api/uploads', express.static(uploadDir));
 
 import adminRoutes from './routes/adminRoutes';
 
