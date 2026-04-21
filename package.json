@@ -5,8 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
-    "vercel-build": "npx prisma generate || true && npx tsc",
+    "build": "npx prisma generate && npx tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
@@ -15,7 +14,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@prisma/client": "^5.10.2",
-    "axios": "^1.15.1",
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
