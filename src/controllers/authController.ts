@@ -125,3 +125,33 @@ export const googleAuth = async (req: Request, res: Response) => {
   }
 };
 
+export const facebookAuth = async (req: Request, res: Response) => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      return res.status(400).json({ error: "Missing Facebook access token" });
+    }
+
+    const result = await authService.facebookLogin(accessToken);
+    if (result.error || !result.user) {
+      return res.status(401).json({ error: result.error });
+    }
+
+    const user = result.user;
+    const token = authService.generateToken(user.id, user.email, user.role);
+
+    res.cookie('islandinvest_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    res.status(200).json({ user, token });
+  } catch (error) {
+    console.error("Facebook Auth error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+

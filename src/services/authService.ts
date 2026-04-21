@@ -142,3 +142,49 @@ export async function googleLogin(idToken: string) {
     return { error: "Google authentication failed" };
   }
 }
+
+export async function facebookLogin(accessToken: string) {
+  try {
+    const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`);
+    const data = await response.json();
+
+    if (data.error) {
+      return { error: "Invalid Facebook token" };
+    }
+
+    const { email, name, id: providerId, picture } = data;
+    const avatarUrl = picture?.data?.url ?? null;
+
+    // Use email if available, otherwise use providerId-based pseudo-email
+    const userEmail = email || `${providerId}@facebook.com`;
+
+    const user = await prisma.user.upsert({
+      where: { email: userEmail },
+      update: {
+        name: name ?? undefined,
+        avatarUrl: avatarUrl ?? undefined,
+      },
+      create: {
+        email: userEmail,
+        name: name ?? userEmail.split('@')[0],
+        avatarUrl: avatarUrl,
+        authProvider: 'facebook',
+        providerId,
+        role: Role.USER,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    return { user };
+  } catch (error) {
+    console.error("Facebook login error:", error);
+    return { error: "Facebook authentication failed" };
+  }
+}
